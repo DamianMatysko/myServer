@@ -45,8 +45,6 @@ public class DateAndTime {
             obj.put("primenumber", false);
             return ResponseEntity.status(200).body(obj.toString());
         }
-
-
     }
 
     @RequestMapping("/time/hour")
@@ -73,49 +71,75 @@ public class DateAndTime {
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/login")
-    public String login(@RequestBody String credential) {
-        System.out.println(credential);
-        return "{\"Error\":\"Login already exists\"}";
+    public ResponseEntity<String> login(@RequestBody String data) {
+        JSONObject obj = new JSONObject(data);
+        if (findLogin(obj.getString("login")) && findPassword(obj.getString("password"))) {
+            JSONObject res = new JSONObject();
+            User user = findInformation(obj.getString("login"));
+            res.put("fname", user.getFname());
+            res.put("lname", user.getLname());
+            res.put("login", user.getLogin());
+            res.put("token", user.getToken());
+            return ResponseEntity.status(200).body(res.toString());
+        } else {
+            JSONObject res = new JSONObject();
+            res.put("error", "wrong login or password");
+            return ResponseEntity.status(401).body(res.toString());
+        }
     }
 
-    @RequestMapping(method=RequestMethod.POST, value="/signup")
-    public ResponseEntity<String> signup(@RequestBody String data){
+    @RequestMapping(method = RequestMethod.POST, value = "/signup")
+    public ResponseEntity<String> signup(@RequestBody String data) {
         System.out.println(data);
         JSONObject obj = new JSONObject(data);
-        if(obj.has("fname") && obj.has("lname")&& obj.has("login")&& obj.has("password"))
-        {
-            if(findLogin(obj.getString("login"))){
+        if (obj.has("fname") && obj.has("lname") && obj.has("login") && obj.has("password")) {
+            if (findLogin(obj.getString("login"))) {
                 JSONObject res = new JSONObject();
-                res.put("error","user already exists");
+                res.put("error", "user already exists");
                 return ResponseEntity.status(400).body(res.toString());
             }
             String password = obj.getString("password");
-            if(password.isEmpty()){
+            if (password.isEmpty()) {
                 JSONObject res = new JSONObject();
-                res.put("error","password is a mandatory field");
+                res.put("error", "password is a mandatory field");
                 return ResponseEntity.status(400).body(res.toString());
             }
             User user = new User(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), obj.getString("password"));
             list.add(user);
             JSONObject res = new JSONObject();
-            res.put("fname",obj.getString("fname"));
-            res.put("lname",obj.getString("lname"));
-            res.put("login",obj.getString("login"));
+            res.put("fname", obj.getString("fname"));
+            res.put("lname", obj.getString("lname"));
+            res.put("login", obj.getString("login"));
             return ResponseEntity.status(201).body(res.toString());
-        }
-        else{
+        } else {
             JSONObject res = new JSONObject();
-            res.put("error","invalid input");
+            res.put("error", "invalid input");
             return ResponseEntity.status(400).body(res.toString());
         }
     }
 
     private boolean findLogin(String login) {
-        for(User user : list){
-            if(user.getLogin().equalsIgnoreCase(login))
+        for (User user : list) {
+            if (user.getLogin().equalsIgnoreCase(login))
                 return true;
         }
         return false;
+    }
+
+    private boolean findPassword(String password) {
+        for (User user : list) {
+            if (user.getPassword().equalsIgnoreCase(password))
+                return true;
+        }
+        return false;
+    }
+
+    private User findInformation(String login) {
+        for (User user : list) {
+            if (user.getLogin().equalsIgnoreCase(login))
+                return user;
+        }
+        return null;
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/logout")
@@ -128,6 +152,4 @@ public class DateAndTime {
         res.put("login", "kral");
         return ResponseEntity.status(200).body(res.toString());
     }
-
 }
-
