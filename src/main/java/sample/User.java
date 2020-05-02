@@ -5,16 +5,22 @@ public class User {
     private String lname;
     private String login;
     private String password;
+    private String token;
 
     public User(String fname, String lname, String login, String password) {
         this.fname = fname;
         this.lname = lname;
         this.login = login;
         this.password = password;
+        this.token=null;
     }
 
     public String getFname() {
         return fname;
+    }
+
+    public String getToken() {
+        return token;
     }
 
     public String getLname() {
@@ -29,9 +35,11 @@ public class User {
         return password;
     }
 
+    public void tokenResetter(){
+        this.token=null;
+    }
 
-
-
-
-
+    public void generateToken() {
+        this.token="token";
+    }
 }
