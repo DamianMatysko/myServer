@@ -1,6 +1,7 @@
 package sample;
 
 import org.json.JSONObject;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 public class DateAndTime {
     List<User> list = new ArrayList<User>();
+    List<String> log = new ArrayList<String>();
 
     public DateAndTime() {
         list.add(new User("Roman", "Simko", "roman", "heslo"));
@@ -23,7 +25,7 @@ public class DateAndTime {
         if (token.equals(findInformation(login).getToken())) {
             String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
             return ResponseEntity.status(200).body(timeStamp);
-        }else{
+        } else {
             return ResponseEntity.status(401).body("error: you must be login to get time");
         }
     }
@@ -78,7 +80,7 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/login")
     public ResponseEntity<String> login(@RequestBody String data) {
         JSONObject obj = new JSONObject(data);
-        if (findLogin(obj.getString("login")) && findPassword(obj.getString("password"))) {
+        if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
             JSONObject res = new JSONObject();
             User user = findInformation(obj.getString("login"));
             user.generateToken();
@@ -86,6 +88,14 @@ public class DateAndTime {
             res.put("lname", user.getLname());
             res.put("login", user.getLogin());
             res.put("token", user.getToken());
+
+
+            JSONObject history = new JSONObject();
+            history.put("type", "login");
+            history.put("login", user.getLogin());
+            history.put("datetime", getTime(user.getLogin(), user.getToken()));
+            log.add(history.toString());
+
             return ResponseEntity.status(200).body(res.toString());
         } else {
             JSONObject res = new JSONObject();
@@ -94,7 +104,7 @@ public class DateAndTime {
         }
     }
 
-    @RequestMapping(method=RequestMethod.POST, value="/signup")
+    @RequestMapping(method = RequestMethod.POST, value = "/signup")
     public ResponseEntity<String> signup(@RequestBody String data) {
         //System.out.println(data);
         JSONObject obj = new JSONObject(data);
@@ -128,7 +138,7 @@ public class DateAndTime {
     }
 
     private String hash(String password) {
-        return password;
+        return BCrypt.hashpw(password, BCrypt.gensalt(11));
     }
 
     private boolean findLogin(String login) {
@@ -141,8 +151,19 @@ public class DateAndTime {
 
     private boolean findPassword(String password) {
         for (User user : list) {
-            if (user.getPassword().equalsIgnoreCase(password))
+            if (user.getPassword() == hash(password))
                 return true;
+        }
+        return false;
+    }
+
+    private boolean checkUserPass(String login, String password) {
+        for (User user : list) {
+            if (user != null && user.getLogin().equalsIgnoreCase(login)) {
+                if (BCrypt.checkpw(password, user.getPassword()))
+                    //if (user.getPassword().equalsIgnoreCase(password))
+                    return true;
+            }
         }
         return false;
     }
@@ -156,13 +177,74 @@ public class DateAndTime {
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/logout")
-    public ResponseEntity<String> logout(@RequestBody String data) {
+    public ResponseEntity<String> logout(@RequestBody String data, @RequestParam(value = "token") String userToken) {
         JSONObject obj = new JSONObject(data);
-        if (obj.get("login")==findInformation(obj.get("login").toString())&&obj.get("token")==findInformation(obj.get("token").toString())){
+        if (findLogin(obj.getString("login")) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
+            System.out.println("if ok");
             findInformation(obj.get("login").toString()).tokenResetter();
-            return ResponseEntity.status(200).body("");
-        }else {
+
+            User user = findInformation(obj.getString("login"));
+            JSONObject history = new JSONObject();
+            history.put("type", "login");
+            //history.put("login", user.getFname() + " " + user.getLname());
+            history.put("login", user.getLogin());
+            String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
+            history.put("datetime", timeStamp);
+            log.add(history.toString());
+
+
+            return ResponseEntity.status(200).body("OK");
+        } else {
             return ResponseEntity.status(401).body("error");
         }
     }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/log")
+    public ResponseEntity log(@RequestBody String data, @RequestParam(value = "token") String userToken) {
+        JSONObject obj = new JSONObject(data);
+        JSONObject format = new JSONObject();
+        if (findLogin(obj.getString("login")) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
+
+            List<String> myList = new ArrayList<String>();
+
+            int count = 0;
+            for (String list : log) {
+
+                JSONObject information = new JSONObject(list);
+
+                System.out.println(information.getString("login")+"   "+obj.getString("login"));
+
+                System.out.println(list);
+                if (information.getString("login").equals(obj.getString("login"))) {
+                    System.out.println(list);
+
+
+                    myList.add(list);
+                    format.put(String.valueOf(count), list);
+                    count++;
+                }
+            }
+
+
+
+            String string = format.toString();
+
+            return ResponseEntity.status(200).body(string);
+
+
+        } else {
+            return ResponseEntity.status(401).body("error");
+        }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/changepassword")
+    public ResponseEntity<String> changePassword(@RequestBody String data, @RequestParam(value = "token") String userToken) {
+        JSONObject obj = new JSONObject(data);
+        if (findLogin(obj.getString("login")) && BCrypt.checkpw(obj.getString("oldpassword"), findInformation(obj.getString("login")).getPassword()) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
+            findInformation(obj.getString("login")).setPassword(hash(obj.getString("newpassword")));
+            return ResponseEntity.status(200).body("changed");
+        }
+        return ResponseEntity.status(401).body("error");
+    }
+
 }
