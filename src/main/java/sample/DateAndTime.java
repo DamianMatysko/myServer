@@ -15,6 +15,7 @@ import java.util.List;
 public class DateAndTime {
     List<User> list = new ArrayList<User>();
     List<String> log = new ArrayList<String>();
+    List<String> messages = new ArrayList<String>();
 
     public DateAndTime() {
         list.add(new User("Roman", "Simko", "roman", "heslo"));
@@ -186,7 +187,7 @@ public class DateAndTime {
             User user = findInformation(obj.getString("login"));
             JSONObject history = new JSONObject();
             history.put("type", "login");
-            //history.put("login", user.getFname() + " " + user.getLname());
+
             history.put("login", user.getLogin());
             String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
             history.put("datetime", timeStamp);
@@ -212,21 +213,12 @@ public class DateAndTime {
 
                 JSONObject information = new JSONObject(list);
 
-                System.out.println(information.getString("login")+"   "+obj.getString("login"));
-
-                System.out.println(list);
                 if (information.getString("login").equals(obj.getString("login"))) {
-                    System.out.println(list);
-
-
                     myList.add(list);
                     format.put(String.valueOf(count), list);
                     count++;
                 }
             }
-
-
-
             String string = format.toString();
 
             return ResponseEntity.status(200).body(string);
@@ -245,6 +237,54 @@ public class DateAndTime {
             return ResponseEntity.status(200).body("changed");
         }
         return ResponseEntity.status(401).body("error");
+
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/message/new")
+    public ResponseEntity<String> newMessage(@RequestBody String data, @RequestParam(value = "token") String userToken) {
+        JSONObject obj = new JSONObject(data);
+        if (findInformation(obj.getString("from")).getToken().equals(userToken)&& findLogin(obj.getString("from")) && findLogin(obj.getString("to"))) {
+/*
+            JSONObject message = new JSONObject();
+            message.put("from", "login");
+            message.put("to", "login");
+            message.put("message", "login");
+
+ */
+            String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
+            obj.put("time", timeStamp);
+            messages.add(obj.toString());
+            return ResponseEntity.status(201).body("Message send");
+        } else {
+            return ResponseEntity.status(400).body("error");
+        }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/messages")
+    public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken) {
+        JSONObject obj = new JSONObject(data);
+
+        if (findLogin(obj.getString("login")) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
+            JSONObject format = new JSONObject();
+
+            int count = 0;
+            for (String list : messages) {
+                JSONObject information = new JSONObject(list);
+
+                System.out.println(list);
+                if (information.getString("from").equals(obj.getString("login"))||information.getString("to").equals(obj.getString("login"))) {
+                    format.put(String.valueOf(count), list);
+                    count++;
+                }
+            }
+            String string = format.toString();
+
+            return ResponseEntity.status(201).body(string);
+
+
+        } else {
+            return ResponseEntity.status(400).body("error");
+        }
     }
 
 }
