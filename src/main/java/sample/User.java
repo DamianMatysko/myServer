@@ -3,6 +3,22 @@ package sample;
 import java.util.Random;
 
 public class User {
+    public void setFname(String fname) {
+        this.fname = fname;
+    }
+
+    public void setLname(String lname) {
+        this.lname = lname;
+    }
+
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
     private String fname;
     private String lname;
     private String login;
