@@ -1,5 +1,9 @@
 package sample;
 
+import database.MongoDBcontroller;
+import org.bson.BsonDocument;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.json.JSONObject;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
@@ -97,6 +101,9 @@ public class DateAndTime {
             history.put("datetime", getTime(user.getLogin(), user.getToken()));
             log.add(history.toString());
 
+            MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+            mongoDBcontroller.addLogs(user.getLogin());
+
             return ResponseEntity.status(200).body(res.toString());
         } else {
             JSONObject res = new JSONObject();
@@ -148,6 +155,7 @@ public class DateAndTime {
                 return true;
         }
         return false;
+       // if (new MongoDBcontroller().getCollectionList().find(Bson bson ))
     }
 
     private boolean findPassword(String password) {
@@ -251,15 +259,23 @@ public class DateAndTime {
             message.put("message", "login");
 
  */
+            System.out.println(obj.toString());
+
+            MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+            mongoDBcontroller.addMessages(obj.getString("from"), obj.getString("to"), obj.getString("message"));
+
+
             String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
             obj.put("time", timeStamp);
+
+
             messages.add(obj.toString());
             return ResponseEntity.status(201).body("Message send");
         } else {
             return ResponseEntity.status(400).body("error");
         }
     }
-
+/*
     @RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")
     public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) {
         JSONObject obj = new JSONObject(data);
@@ -278,6 +294,18 @@ public class DateAndTime {
             }
             String string = format.toString();
             return ResponseEntity.status(201).body(string);
+        } else {
+            return ResponseEntity.status(400).body("error");
+        }
+    }
+
+ */
+
+    @RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")
+    public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) {
+        JSONObject obj = new JSONObject(data);
+        if (new MongoDBcontroller().getCollectionMessages()) {
+
         } else {
             return ResponseEntity.status(400).body("error");
         }
