@@ -1,15 +1,11 @@
 package sample;
 
 import database.MongoDBcontroller;
-import org.bson.BsonDocument;
-import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.json.JSONObject;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -85,7 +81,12 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/login")
     public ResponseEntity<String> login(@RequestBody String data) {
         JSONObject obj = new JSONObject(data);
-        if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
+        //if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
+
+        System.out.println("aaaaaaaaaaaaaaaaaa"+new MongoDBcontroller().findInformationFromMongo(obj.getString("login")).getString("password"));
+        System.out.println("aaaaaaaaaaaaaaaaaa"+hash(obj.getString("password")));
+        if (new MongoDBcontroller().findInformationFromMongo(obj.getString("login")).getString("login")==obj.getString("login")) {
+
             JSONObject res = new JSONObject();
             User user = findInformation(obj.getString("login"));
             user.generateToken();
@@ -106,6 +107,7 @@ public class DateAndTime {
 
             return ResponseEntity.status(200).body(res.toString());
         } else {
+
             JSONObject res = new JSONObject();
             res.put("error", "wrong login or password");
             return ResponseEntity.status(401).body(res.toString());
@@ -133,6 +135,8 @@ public class DateAndTime {
 
             User user = new User(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), hashPass);
             list.add(user);
+            new MongoDBcontroller().addList(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), hashPass);
+
             JSONObject res = new JSONObject();
             res.put("fname", obj.getString("fname"));
             res.put("lname", obj.getString("lname"));
@@ -170,7 +174,6 @@ public class DateAndTime {
         for (User user : list) {
             if (user != null && user.getLogin().equalsIgnoreCase(login)) {
                 if (BCrypt.checkpw(password, user.getPassword()))
-                    //if (user.getPassword().equalsIgnoreCase(password))
                     return true;
             }
         }
@@ -304,8 +307,9 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")
     public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) {
         JSONObject obj = new JSONObject(data);
-        if (new MongoDBcontroller().getCollectionMessages()) {
-
+        if (null!=null) {
+            JSONObject mongo = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
+            return ResponseEntity.status(400).body("error");
         } else {
             return ResponseEntity.status(400).body("error");
         }

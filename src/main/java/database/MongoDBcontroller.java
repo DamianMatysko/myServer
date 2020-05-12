@@ -1,7 +1,9 @@
 package database;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -47,9 +49,9 @@ public class MongoDBcontroller {
         return collectionMessages;
     }
 
-    public void addMessages(String from, String to ,String message) {
+    public void addMessages(String from, String to, String message) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
-        Document document= new Document("from", from)
+        Document document = new Document("from", from)
                 .append("to", to)
                 .append("message", message)
                 .append("time", timeStamp);
@@ -58,25 +60,41 @@ public class MongoDBcontroller {
 
     public void addLogs(String login) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
-        Document document= new Document("type", "login")
+        Document document = new Document("type", "login")
                 .append("login", login)
                 .append("time", timeStamp);
         collectionLogs.insertOne(document);
     }
 
-    public void addList(String fname, String lname, String login, String passworld) {
-        Document document= new Document("fname", fname)
+    public void addList(String fname, String lname, String login, String password) {
+        Document document = new Document("fname", fname)
                 .append("lname", lname)
                 .append("login", login)
-                .append("passworld", passworld);
+                .append("password", password);
         collectionList.insertOne(document);
     }
 
-    public void upade(MongoCollection<Document> collection) {
-        Bson upadeValue=new Document();
-        Bson    Value=new Document();
+    public JSONObject findInformationFromMongo(String login) {
+        BasicDBObject basicDBObject = new BasicDBObject();
+        basicDBObject.put("login", login);
+
+        MongoCursor<Document> mongoCursor = collectionList.find().iterator();
+        while (mongoCursor.hasNext()) {
+            Document doc = mongoCursor.next();
+            JSONObject object = new JSONObject(doc.toJson());
+            if (object.getString("login").equals(login)) {
+                System.out.println(object);
+                return object;
+            }
+        }
+        return null;
     }
 
+
+    public void upade(MongoCollection<Document> collection) {
+        Bson upadeValue = new Document();
+        Bson Value = new Document();
+    }
 
 
 }
