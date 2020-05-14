@@ -6,16 +6,21 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 
 @RestController
 public class DateAndTime {
     List<User> list = new ArrayList<User>();
     List<String> log = new ArrayList<String>();
     List<String> messages = new ArrayList<String>();
+    List<String> tokens = new ArrayList<String>();
+    List<String> bans = new ArrayList<String>();
+    List<String> wrongImputs = new ArrayList<String>();
 
     public DateAndTime() {
         list.add(new User("Roman", "Simko", "roman", "heslo"));
@@ -83,36 +88,66 @@ public class DateAndTime {
         JSONObject obj = new JSONObject(data);
         //if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
 
-        System.out.println("aaaaaaaaaaaaaaaaaa"+new MongoDBcontroller().findInformationFromMongo(obj.getString("login")).getString("password"));
-        System.out.println("aaaaaaaaaaaaaaaaaa"+hash(obj.getString("password")));
-        if (new MongoDBcontroller().findInformationFromMongo(obj.getString("login")).getString("login")==obj.getString("login")) {
-
+        if (userHaveBan(obj.getString("login"))) {
             JSONObject res = new JSONObject();
-            User user = findInformation(obj.getString("login"));
-            user.generateToken();
-            res.put("fname", user.getFname());
-            res.put("lname", user.getLname());
-            res.put("login", user.getLogin());
-            res.put("token", user.getToken());
-
-
-            JSONObject history = new JSONObject();
-            history.put("type", "login");
-            history.put("login", user.getLogin());
-            history.put("datetime", getTime(user.getLogin(), user.getToken()));
-            log.add(history.toString());
-
-            MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
-            mongoDBcontroller.addLogs(user.getLogin());
-
-            return ResponseEntity.status(200).body(res.toString());
-        } else {
-
-            JSONObject res = new JSONObject();
-            res.put("error", "wrong login or password");
+            res.put("error", "too many inputs");
             return ResponseEntity.status(401).body(res.toString());
         }
+        if (new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            if (new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("password"))) {
+
+
+                JSONObject user = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
+                user.put("token", generateToken());
+                tokens.add(user.toString());
+
+                JSONObject history = new JSONObject();
+                history.put("type", "login");
+                history.put("login", user.getString("login"));
+                String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
+                history.put("datetime", timeStamp);
+                log.add(history.toString());
+
+                MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+                mongoDBcontroller.addLogs(user.getString("login"));
+
+
+                return ResponseEntity.status(200).body(user.toString());
+            }
+        }
+/*
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("login", obj.getString("login"));
+        jsonObject.put("try", 1);
+        wrongImputs.add(jsonObject.toString());
+
+if (countOfWrongInputs(obj.getString("login"))) {
+ */
+    JSONObject banForUser = new JSONObject();
+    banForUser.put("login", obj.getString("login"));
+    String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
+    banForUser.put("time", timeStamp);
+    bans.add(banForUser.toString());
+//}
+
+        return ResponseEntity.status(401).body("wrong login or password");
     }
+
+    private boolean userHaveBan(String login) {
+        for (String string : bans) {
+            JSONObject jsonObject = new JSONObject(string);
+            if (jsonObject.getString("login").equalsIgnoreCase(login)) {
+                String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
+                if (!jsonObject.getString("time").equals(timeStamp)) {//not same time
+                    bans.remove(string);
+                    return false;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     @RequestMapping(method = RequestMethod.POST, value = "/signup")
     public ResponseEntity<String> signup(@RequestBody String data) {
@@ -159,7 +194,7 @@ public class DateAndTime {
                 return true;
         }
         return false;
-       // if (new MongoDBcontroller().getCollectionList().find(Bson bson ))
+        // if (new MongoDBcontroller().getCollectionList().find(Bson bson ))
     }
 
     private boolean findPassword(String password) {
@@ -191,15 +226,19 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/logout")
     public ResponseEntity<String> logout(@RequestBody String data, @RequestParam(value = "token") String userToken) {
         JSONObject obj = new JSONObject(data);
-        if (findLogin(obj.getString("login")) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
-            System.out.println("if ok");
-            findInformation(obj.get("login").toString()).tokenResetter();
+        //new MongoDBcontroller().existUserMongo(obj.getString("login"))&&
+        if (checkToken(obj.getString("login"), userToken)) {
+
+
+            //findInformation(obj.get("login").toString()).tokenResetter();
+            deletTokenFromList(userToken);
+
 
             User user = findInformation(obj.getString("login"));
             JSONObject history = new JSONObject();
             history.put("type", "login");
 
-            history.put("login", user.getLogin());
+            history.put("login", obj.getString("login"));
             String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
             history.put("datetime", timeStamp);
             log.add(history.toString());
@@ -209,6 +248,36 @@ public class DateAndTime {
         } else {
             return ResponseEntity.status(401).body("error");
         }
+    }
+
+    private boolean deletTokenFromList(String tokenToDelete) {
+        for (String string : tokens) {
+            System.out.println(string);
+            JSONObject jsonObject = new JSONObject(string);
+            if (jsonObject.getString("token").equals(tokenToDelete)) {
+                tokens.remove(jsonObject);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean checkToken(String login, String tokenToCompare) {
+
+        for (String string : tokens) {
+            System.out.println(string);
+            JSONObject jsonObject = new JSONObject(string);
+            System.out.println("login compares" + " " + jsonObject.getString("login") + " " + login);
+            if (jsonObject.getString("login").equals(login)) {
+
+                if (jsonObject.getString("token").equals(tokenToCompare)) {
+
+                    return true;
+
+                }
+            }
+        }
+        return false;
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/log?type={type}")
@@ -307,7 +376,7 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")
     public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) {
         JSONObject obj = new JSONObject(data);
-        if (null!=null) {
+        if (null != null) {
             JSONObject mongo = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
             return ResponseEntity.status(400).body("error");
         } else {
@@ -340,6 +409,26 @@ public class DateAndTime {
         } else {
             return ResponseEntity.status(400).body("error wrong token or login");
         }
+    }
+
+    public String generateToken() {
+        int size = 25;
+        Random rnd = new Random();
+        String generatedString = "";
+        for (int i = 0; i < size; i++) {
+            int type = rnd.nextInt(4);
+            switch (type) {
+                case 0:
+                    generatedString += (char) ((rnd.nextInt(26)) + 65);
+                    break;
+                case 1:
+                    generatedString += (char) ((rnd.nextInt(10)) + 48);
+                    break;
+                default:
+                    generatedString += (char) ((rnd.nextInt(26)) + 97);
+            }
+        }
+        return generatedString;
     }
 
 

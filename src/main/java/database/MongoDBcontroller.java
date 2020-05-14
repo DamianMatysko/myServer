@@ -8,6 +8,9 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONObject;
+import org.mindrot.jbcrypt.BCrypt;
+import sample.DateAndTime;
+import sample.MainController;
 import sample.User;
 
 import java.text.SimpleDateFormat;
@@ -90,6 +93,26 @@ public class MongoDBcontroller {
         return null;
     }
 
+    private String hash(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt(11));
+    }
+
+    public boolean checkUserPassMongo(String login, String passwordToCompare) {
+        BasicDBObject basicDBObject = new BasicDBObject();
+        basicDBObject.put("login", login);
+
+        if (BCrypt.checkpw(passwordToCompare,findInformationFromMongo(login).getString("password") )) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean existUserMongo(String loginToCompare) {
+        if (findInformationFromMongo(loginToCompare) != null) {
+            return true;
+        }
+        return false;
+    }
 
     public void upade(MongoCollection<Document> collection) {
         Bson upadeValue = new Document();
