@@ -8,29 +8,36 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.mindrot.jbcrypt.BCrypt;
-import sample.DateAndTime;
-import sample.MainController;
-import sample.User;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-public class MongoDBcontroller {
-    MongoClient mongoClient = null;
-    MongoDatabase database = null;
-    MongoCollection<org.bson.Document> collectionList = null;
-    MongoCollection<org.bson.Document> collectionLogs = null;
-    MongoCollection<org.bson.Document> collectionMessages = null;
 
-    public MongoDBcontroller() {
-        this.mongoClient = new MongoClient("localhost", 27017);
-        this.database = mongoClient.getDatabase("itBanking");
+public class MongoDBcontroller {
+    String urlConfig, portConfig, databaseConfig;
+    MongoClient mongoClient;
+    MongoDatabase database;
+    MongoCollection<org.bson.Document> collectionList, collectionLogs, collectionMessages;
+
+    //MongoClient mongoClient = new MongoClient("localhost", 27017);
+    //MongoDatabase database = mongoClient.getDatabase("itBanking");
+
+    public MongoDBcontroller() throws FileNotFoundException {
+        configReader();
+        this.mongoClient = new MongoClient(urlConfig, Integer.parseInt(portConfig));
+        this.database = mongoClient.getDatabase(databaseConfig);
         this.collectionList = collectionList = database.getCollection("list");
         this.collectionLogs = collectionLogs = database.getCollection("log");
         this.collectionMessages = collectionMessages = database.getCollection("messages");
         System.out.println("Database connected");
     }
+
 
     public MongoClient getMongoClient() {
         return mongoClient;
@@ -101,7 +108,7 @@ public class MongoDBcontroller {
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
 
-        if (BCrypt.checkpw(passwordToCompare,findInformationFromMongo(login).getString("password") )) {
+        if (BCrypt.checkpw(passwordToCompare, findInformationFromMongo(login).getString("password"))) {
             return true;
         }
         return false;
@@ -117,6 +124,28 @@ public class MongoDBcontroller {
     public void upade(MongoCollection<Document> collection) {
         Bson upadeValue = new Document();
         Bson Value = new Document();
+    }
+
+    @SuppressWarnings("unchecked")
+    public void configReader() throws FileNotFoundException {
+        String filePath = "C:\\Users\\FireflySK\\IdeaProjects\\myServer\\src\\main\\java\\database\\config.json";
+        try {
+            FileReader fileReader = new FileReader(filePath);
+            JSONParser parser = new JSONParser();
+            org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) parser.parse(fileReader);
+            System.out.println(jsonObject);
+            if (jsonObject.containsKey("url") && jsonObject.containsKey("port") && jsonObject.containsKey("database")) {
+                this.urlConfig = jsonObject.get("url").toString();
+                this.portConfig = jsonObject.get("port").toString();
+                this.databaseConfig = jsonObject.get("database").toString();
+            } else {
+                System.out.println("error: wrong configuration file");
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

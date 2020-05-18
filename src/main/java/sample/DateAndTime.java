@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -84,7 +85,7 @@ public class DateAndTime {
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/login")
-    public ResponseEntity<String> login(@RequestBody String data) {
+    public ResponseEntity<String> login(@RequestBody String data) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
         //if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
 
@@ -150,7 +151,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
 
 
     @RequestMapping(method = RequestMethod.POST, value = "/signup")
-    public ResponseEntity<String> signup(@RequestBody String data) {
+    public ResponseEntity<String> signup(@RequestBody String data) throws FileNotFoundException {
         //System.out.println(data);
         JSONObject obj = new JSONObject(data);
 
@@ -321,7 +322,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/message/new")
-    public ResponseEntity<String> newMessage(@RequestBody String data, @RequestParam(value = "token") String userToken) {
+    public ResponseEntity<String> newMessage(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
         if (findInformation(obj.getString("from")).getToken().equals(userToken) && findLogin(obj.getString("from")) && findLogin(obj.getString("to"))) {
 /*
@@ -374,7 +375,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
  */
 
     @RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")
-    public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) {
+    public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken, @PathVariable String fromUser) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
         if (null != null) {
             JSONObject mongo = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
