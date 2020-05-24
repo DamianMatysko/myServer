@@ -153,7 +153,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
     public Date addMinutesToJavaUtilDate(Date date, int minits) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
-        calendar.add(Calendar.MINUTE, minits);
+        calendar.add(Calendar.MINUTE, minits);//TODO add 5min no 1
         return calendar.getTime();
     }
 
@@ -162,15 +162,13 @@ if (countOfWrongInputs(obj.getString("login"))) {
             JSONObject jsonObject = new JSONObject(string);
             if (jsonObject.getString("login").equalsIgnoreCase(login)) {
                 String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
-
-                SimpleDateFormat  simpleDateFormat =new SimpleDateFormat("HH:mm dd/MM/yyyy"); //.format(jsonObject.getString("time"));
-                //Date date = new Date(Long.parseLong(jsonObject.getString("time")));
-                //Date date = new Date(String.valueOf(Timestamp.valueOf(jsonObject.getString("time"))));
-                //Timestamp.valueOf(jsonObject.getString("time")).after(Calendar.getInstance().getTime())
-                //System.out.println(simpleDateFormat.format(date));
+                SimpleDateFormat  simpleDateFormat =new SimpleDateFormat("HH:mm dd/MM/yyyy");
                 Date date = simpleDateFormat.parse(jsonObject.getString("time"));
-                //if (Timestamp.valueOf(jsonObject.getString("time")).after(Calendar.getInstance().getTime())) {//not same time
-                if (Calendar.getInstance().getTime().after(date)) {//not same time
+
+                System.out.println(date);
+                System.out.println(Calendar.getInstance().getTime());
+                System.out.println(Calendar.getInstance().getTime().after(date));
+                if (Calendar.getInstance().getTime().after(date)) {
                     bans.remove(string);
                     return false;
                 }
