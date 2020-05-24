@@ -16,7 +16,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 
 public class MongoDBcontroller {
@@ -68,9 +70,17 @@ public class MongoDBcontroller {
         collectionMessages.insertOne(document);
     }
 
-    public void addLogs(String login) {
+    public void addLogsLogin(String login) {
         String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
         Document document = new Document("type", "login")
+                .append("login", login)
+                .append("time", timeStamp);
+        collectionLogs.insertOne(document);
+    }
+
+    public void addLogsLogout(String login) {
+        String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
+        Document document = new Document("type", "logout")
                 .append("login", login)
                 .append("time", timeStamp);
         collectionLogs.insertOne(document);
@@ -100,6 +110,38 @@ public class MongoDBcontroller {
         return null;
     }
 
+    public JSONObject findMessagesFromMongo(String login) {
+        BasicDBObject basicDBObject = new BasicDBObject();
+        basicDBObject.put("login", login);
+
+        MongoCursor<Document> mongoCursor = collectionMessages.find().iterator();
+        while (mongoCursor.hasNext()) {
+            Document doc = mongoCursor.next();
+            JSONObject object = new JSONObject(doc.toJson());
+            if (object.getString("from").equals(login)||object.getString("to").equals(login)) {
+                System.out.println(object);
+                return object;
+            }
+        }
+        return null;
+    }
+
+    public List<String> findLogsFromMongo(String login) {
+        BasicDBObject basicDBObject = new BasicDBObject();
+        basicDBObject.put("login", login);
+        List<String> myList = new ArrayList<String>();
+        MongoCursor<Document> mongoCursor = collectionLogs.find().iterator();
+        while (mongoCursor.hasNext()) {
+            Document doc = mongoCursor.next();
+            JSONObject object = new JSONObject(doc.toJson());
+            if (object.getString("login").equals(login)) {
+                myList.add(object.toString());
+            }
+        }
+        System.out.println(myList);
+        return myList;
+    }
+
     private String hash(String password) {
         return BCrypt.hashpw(password, BCrypt.gensalt(11));
     }
@@ -113,6 +155,45 @@ public class MongoDBcontroller {
         }
         return false;
     }
+
+    public void changePassword(String login, String passHash) {
+        Bson filter = new Document("login", login);
+        Bson newValue = new Document("password", passHash);
+        Bson updateOperationDocument = new Document("$set", newValue);
+        collectionList.updateOne(filter, updateOperationDocument);
+    }
+
+    public void deleteUser(String login){
+        BasicDBObject basicDBObject = new BasicDBObject();
+        basicDBObject.put("login", login);
+        collectionList.deleteOne(basicDBObject);
+
+        try (MongoCursor<Document> cursor = collectionMessages.find().iterator()) {
+            while (cursor.hasNext()) {
+                Document doc = cursor.next();
+                JSONObject object = new JSONObject(doc.toJson());
+                if (object.getString("from").equals(login)){
+                    basicDBObject = new BasicDBObject();
+                    basicDBObject.put("from", login);
+                    collectionMessages.deleteOne(basicDBObject);
+                }
+            }
+        }
+    }
+    public void updateFname(String name, String fname) {
+        Bson filter = new Document("fname", name);
+        Bson newValue = new Document("fname", fname);
+        Bson updateOperationDocument = new Document("$set", newValue);
+        collectionList.updateOne(filter, updateOperationDocument);
+    }
+
+    public void updateLname(String name, String lname) {
+        Bson filter = new Document("lname", name);
+        Bson newValue = new Document("lname", lname);
+        Bson updateOperationDocument = new Document("$set", newValue);
+        collectionList.updateOne(filter, updateOperationDocument);
+    }
+
 
     public boolean existUserMongo(String loginToCompare) {
         if (findInformationFromMongo(loginToCompare) != null) {
