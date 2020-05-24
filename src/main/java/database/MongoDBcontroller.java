@@ -113,17 +113,20 @@ public class MongoDBcontroller {
     public JSONObject findMessagesFromMongo(String login) {
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
-
+        JSONObject messages = new JSONObject();
         MongoCursor<Document> mongoCursor = collectionMessages.find().iterator();
+        int count=0;
         while (mongoCursor.hasNext()) {
             Document doc = mongoCursor.next();
             JSONObject object = new JSONObject(doc.toJson());
+
             if (object.getString("from").equals(login)||object.getString("to").equals(login)) {
-                System.out.println(object);
-                return object;
+                count++;
+                messages.put(String.valueOf(count),object);
+
             }
         }
-        return null;
+        return messages;
     }
 
     public List<String> findLogsFromMongo(String login) {
