@@ -6,7 +6,6 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.io.FileNotFoundException;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -80,35 +79,53 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/login")
     public ResponseEntity<String> login(@RequestBody String data) throws FileNotFoundException, ParseException {
         JSONObject obj = new JSONObject(data);
-        //if (findLogin(obj.getString("login")) && checkUserPass(obj.getString("login"), obj.getString("password"))) {
+
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            return ResponseEntity.status(401).body("User doesn't exist");
+        }
 
         if (isUserBanned(obj.getString("login"))) {
-            JSONObject res = new JSONObject();
-            res.put("error", "too many inputs");
-            return ResponseEntity.status(401).body(res.toString());
+            //JSONObject res = new JSONObject();
+            //res.put("error", "too many inputs");
+            return ResponseEntity.status(401).body("Too many inputs");
         }
 
         if (existToken(obj.getString("login"))) {
-            JSONObject res = new JSONObject();
-            res.put("error", "arealy login");
-            return ResponseEntity.status(401).body(res.toString());
+            //JSONObject res = new JSONObject();
+            //res.put("error", "arealy login");
+            return ResponseEntity.status(401).body("Arealy login");
         }
 
-        if (new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
-            if (new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("password"))) {
+        if (!new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("password"))) {
+            JSONObject banForUser = new JSONObject();
+            banForUser.put("login", obj.getString("login"));
+            //String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
 
-                JSONObject user = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
-                user.put("token", generateToken());
-                tokens.add(user.toString());
+            Date date = Calendar.getInstance().getTime();
+            date = addMinutesToJavaUtilDate(date,5);
+            String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(date);
 
+            System.out.println(timeStamp);
+            banForUser.put("time", timeStamp);
+            bans.add(banForUser.toString());
 
-                MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
-                mongoDBcontroller.addLogsLogin(obj.getString("login"));
+            addBan(obj.getString("login"),1);
 
-
-                return ResponseEntity.status(200).body(user.toString());
-            }
+            return ResponseEntity.status(401).body("Wrong password");
         }
+
+
+        JSONObject user = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
+        user.put("token", generateToken());
+        tokens.add(user.toString());
+
+
+        MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+        mongoDBcontroller.addLogsLogin(obj.getString("login"));
+
+
+        return ResponseEntity.status(200).body(user.toString());
+
 /*
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("login", obj.getString("login"));
@@ -117,25 +134,11 @@ public class DateAndTime {
 
 if (countOfWrongInputs(obj.getString("login"))) {
  */
-        JSONObject banForUser = new JSONObject();
-        banForUser.put("login", obj.getString("login"));
-        //String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
 
-
-
-        Date date = Calendar.getInstance().getTime();
-        date = addMinutesToJavaUtilDate(date,5);
-        String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(date);
-
-        System.out.println(timeStamp);
-        banForUser.put("time", timeStamp);
-        bans.add(banForUser.toString());
-
-        addBan(obj.getString("login"),1);
 
 //}
 
-        return ResponseEntity.status(401).body("wrong login or password");
+        //return ResponseEntity.status(401).body("wrong login or password");
     }
 
     private void addBan(String login, int minits) {
@@ -331,7 +334,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
 
             JSONObject mongoMessages = new MongoDBcontroller().findMessagesFromMongo((obj.getString("login")));
 
-            return ResponseEntity.status(400).body(mongoMessages.toString());
+            return ResponseEntity.status(200).body(mongoMessages.toString());
         } else {
             return ResponseEntity.status(400).body("error");
         }
