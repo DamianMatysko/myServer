@@ -369,6 +369,20 @@ if (countOfWrongInputs(obj.getString("login"))) {
         }
     }
 
+    @RequestMapping(method = RequestMethod.POST, value = "/delete/messages")
+    public ResponseEntity<String> deleteMessages(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
+        JSONObject obj = new JSONObject(data);
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))){
+            return ResponseEntity.status(401).body("user doesn't exist");
+        }
+        if (!checkToken(obj.getString("login"), userToken)){
+            return ResponseEntity.status(401).body("wrong token");
+        }
+
+        new MongoDBcontroller().deleteAllMessagess(obj.getString("login"));
+        return ResponseEntity.status(200).body("deleted");
+    }
+
     public String generateToken() {
         int size = 25;
         Random rnd = new Random();

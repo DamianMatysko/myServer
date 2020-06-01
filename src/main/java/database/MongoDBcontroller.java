@@ -115,14 +115,14 @@ public class MongoDBcontroller {
         basicDBObject.put("login", login);
         JSONObject messages = new JSONObject();
         MongoCursor<Document> mongoCursor = collectionMessages.find().iterator();
-        int count=0;
+        int count = 0;
         while (mongoCursor.hasNext()) {
             Document doc = mongoCursor.next();
             JSONObject object = new JSONObject(doc.toJson());
 
-            if (object.getString("from").equals(login)||object.getString("to").equals(login)) {
+            if (object.getString("from").equals(login) || object.getString("to").equals(login)) {
                 count++;
-                messages.put(String.valueOf(count),object);
+                messages.put(String.valueOf(count), object);
 
             }
         }
@@ -166,7 +166,7 @@ public class MongoDBcontroller {
         collectionList.updateOne(filter, updateOperationDocument);
     }
 
-    public void deleteUser(String login){
+    public void deleteUser(String login) {
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
         collectionList.deleteOne(basicDBObject);
@@ -175,7 +175,7 @@ public class MongoDBcontroller {
             while (cursor.hasNext()) {
                 Document doc = cursor.next();
                 JSONObject object = new JSONObject(doc.toJson());
-                if (object.getString("from").equals(login)){
+                if (object.getString("from").equals(login)) {
                     basicDBObject = new BasicDBObject();
                     basicDBObject.put("from", login);
                     collectionMessages.deleteOne(basicDBObject);
@@ -183,6 +183,7 @@ public class MongoDBcontroller {
             }
         }
     }
+
     public void updateFname(String name, String fname) {
         Bson filter = new Document("fname", name);
         Bson newValue = new Document("fname", fname);
@@ -197,6 +198,25 @@ public class MongoDBcontroller {
         collectionList.updateOne(filter, updateOperationDocument);
     }
 
+    public void deleteAllMessagess(String login) {
+        BasicDBObject basicDBObject = new BasicDBObject();
+        try (MongoCursor<Document> cursor = collectionMessages.find().iterator()) {
+            while (cursor.hasNext()) {
+                Document doc = cursor.next();
+                JSONObject object = new JSONObject(doc.toJson());
+                if (object.getString("from").equals(login)) {
+                    basicDBObject = new BasicDBObject();
+                    basicDBObject.put("from", login);
+                    collectionMessages.deleteOne(basicDBObject);
+                }
+                if (object.getString("to").equals(login)) {
+                    basicDBObject = new BasicDBObject();
+                    basicDBObject.put("to", login);
+                    collectionMessages.deleteOne(basicDBObject);
+                }
+            }
+        }
+    }
 
     public boolean existUserMongo(String loginToCompare) {
         if (findInformationFromMongo(loginToCompare) != null) {
@@ -205,10 +225,6 @@ public class MongoDBcontroller {
         return false;
     }
 
-    public void upade(MongoCollection<Document> collection) {
-        Bson upadeValue = new Document();
-        Bson Value = new Document();
-    }
 
     @SuppressWarnings("unchecked")
     public void configReader() throws FileNotFoundException {
