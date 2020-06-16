@@ -7,17 +7,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.FileNotFoundException;
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 @RestController
-public class DateAndTime {
+public class Requests {
     List<String> tokens = new ArrayList<String>();
     List<String> bans = new ArrayList<String>();
-    List<String> wrongImputs = new ArrayList<String>();
-
+    //List<String> wrongImputs = new ArrayList<String>();
 
     @RequestMapping("/time")
     public ResponseEntity getTime(@RequestParam(value = "login") String login, @RequestParam(value = "token") String token) {
@@ -63,7 +61,7 @@ public class DateAndTime {
 
     @RequestMapping("/hello")
     public String getHello() {
-        return "Hello. How are you? ";
+        return "Hello. How are you?";
     }
 
     @RequestMapping("/hello/{name}")
@@ -79,66 +77,49 @@ public class DateAndTime {
     @RequestMapping(method = RequestMethod.POST, value = "/login")
     public ResponseEntity<String> login(@RequestBody String data) throws FileNotFoundException, ParseException {
         JSONObject obj = new JSONObject(data);
+        JSONObject res = new JSONObject();
 
         if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
-            return ResponseEntity.status(401).body("User doesn't exist");
+            res.put("error", "User doesn't exist");
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
 
         if (isUserBanned(obj.getString("login"))) {
-            //JSONObject res = new JSONObject();
-            //res.put("error", "too many inputs");
-            return ResponseEntity.status(401).body("Too many inputs");
+            res.put("error", "Too many inputs");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
 
         if (existToken(obj.getString("login"))) {
-            //JSONObject res = new JSONObject();
-            //res.put("error", "arealy login");
-            return ResponseEntity.status(401).body("Arealy login");
+            res.put("error", "Arealy login");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
 
         if (!new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("password"))) {
             JSONObject banForUser = new JSONObject();
             banForUser.put("login", obj.getString("login"));
-            //String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
 
             Date date = Calendar.getInstance().getTime();
-            date = addMinutesToJavaUtilDate(date,5);
+            date = addMinutesToJavaUtilDate(date, 5);
             String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(date);
 
             System.out.println(timeStamp);
             banForUser.put("time", timeStamp);
             bans.add(banForUser.toString());
 
-            addBan(obj.getString("login"),1);
+            addBan(obj.getString("login"), 1);
 
-            return ResponseEntity.status(401).body("Wrong password");
+            res.put("error", "Wrong password");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
-
 
         JSONObject user = new MongoDBcontroller().findInformationFromMongo(obj.getString("login"));
         user.put("token", generateToken());
         tokens.add(user.toString());
 
-
         MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
         mongoDBcontroller.addLogsLogin(obj.getString("login"));
 
-
         return ResponseEntity.status(200).body(user.toString());
-
-/*
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("login", obj.getString("login"));
-        jsonObject.put("try", 1);
-        wrongImputs.add(jsonObject.toString());
-
-if (countOfWrongInputs(obj.getString("login"))) {
- */
-
-
-//}
-
-        //return ResponseEntity.status(401).body("wrong login or password");
     }
 
     private void addBan(String login, int minits) {
@@ -146,7 +127,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
         banForUser.put("login", login);
 
         Date date = Calendar.getInstance().getTime();
-        date = addMinutesToJavaUtilDate(date,minits);
+        date = addMinutesToJavaUtilDate(date, minits);
         String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(date);
 
         banForUser.put("time", timeStamp);
@@ -165,7 +146,7 @@ if (countOfWrongInputs(obj.getString("login"))) {
             JSONObject jsonObject = new JSONObject(string);
             if (jsonObject.getString("login").equalsIgnoreCase(login)) {
                 String timeStamp = new SimpleDateFormat("HH:mm dd/MM/yyyy").format(Calendar.getInstance().getTime());
-                SimpleDateFormat  simpleDateFormat =new SimpleDateFormat("HH:mm dd/MM/yyyy");
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm dd/MM/yyyy");
                 Date date = simpleDateFormat.parse(jsonObject.getString("time"));
 
                 System.out.println(date);
@@ -181,40 +162,35 @@ if (countOfWrongInputs(obj.getString("login"))) {
         return false;
     }
 
-
     @RequestMapping(method = RequestMethod.POST, value = "/signup")
     public ResponseEntity<String> signup(@RequestBody String data) throws FileNotFoundException {
         //System.out.println(data);
         JSONObject obj = new JSONObject(data);
 
-        if (obj.has("fname") && obj.has("lname") && obj.has("login") && obj.has("password")) { // vstup je ok, mame vsetky kluce
-            if (new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
-                JSONObject res = new JSONObject();
-                res.put("error", "User already exists");
-                return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
-            }
-            String password = obj.getString("password");
-            if (password.isEmpty()) {
-                JSONObject res = new JSONObject();
-                res.put("error", "Password is a mandatory field");
-                return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
-            }
-            String hashPass = hash(obj.getString("password"));
-
-            //User user = new User(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), hashPass);
-            //list.add(user);
-            new MongoDBcontroller().addList(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), hashPass);
-
-            JSONObject res = new JSONObject();
-            res.put("fname", obj.getString("fname"));
-            res.put("lname", obj.getString("lname"));
-            res.put("login", obj.getString("login"));
-            return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).body(res.toString());
-        } else {
+        if (!(obj.has("fname") && obj.has("lname") && obj.has("login") && obj.has("password"))) {// vstup je ok, mame vsetky kluce
             JSONObject res = new JSONObject();
             res.put("error", "Invalid body request");
-            return ResponseEntity.status(400).body(res.toString());
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
+        if (new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            JSONObject res = new JSONObject();
+            res.put("error", "User already exists");
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+        String password = obj.getString("password");
+        if (password.isEmpty()) {
+            JSONObject res = new JSONObject();
+            res.put("error", "Password is a mandatory field");
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+        String hashPass = hash(obj.getString("password"));
+
+        new MongoDBcontroller().addList(obj.getString("fname"), obj.getString("lname"), obj.getString("login"), hashPass);
+        JSONObject res = new JSONObject();
+        res.put("fname", obj.getString("fname"));
+        res.put("lname", obj.getString("lname"));
+        res.put("login", obj.getString("login"));
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).body(res.toString());
     }
 
     private String hash(String password) {
@@ -224,17 +200,24 @@ if (countOfWrongInputs(obj.getString("login"))) {
     @RequestMapping(method = RequestMethod.POST, value = "/logout")
     public ResponseEntity<String> logout(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
+        JSONObject res = new JSONObject();
+        if (!checkToken(obj.getString("login"), userToken)) {
 
-        if (checkToken(obj.getString("login"), userToken) && new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
-
-            MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
-            mongoDBcontroller.addLogsLogout(obj.getString("login"));
-
-            deletTokenFromList(userToken);
-            return ResponseEntity.status(200).body("success ");
-        } else {
-            return ResponseEntity.status(401).body("error");
+            res.put("error", "Wrong token");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
+
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            res.put("error", "Wrong token");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+
+        MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+        mongoDBcontroller.addLogsLogout(obj.getString("login"));
+
+        deletTokenFromList(userToken);
+
+        return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body("{}");
     }
 
     private boolean deletTokenFromList(String tokenToDelete) {
@@ -278,7 +261,6 @@ if (countOfWrongInputs(obj.getString("login"))) {
     //@RequestMapping(method = RequestMethod.POST, value = "/log?type={type}")// @PathVariable String type
     @RequestMapping(method = RequestMethod.POST, value = "/log")
     public ResponseEntity log(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
-        System.out.println("sdckvnsdklhfnsdoAIFHJNSdoi[jfvhno[SDNFVOSDLnhvosdfvjods[jvoi[");
         JSONObject obj = new JSONObject(data);
         System.out.println(new MongoDBcontroller().existUserMongo(obj.getString("login")));
         System.out.println(checkToken(obj.getString("login"), userToken));
@@ -287,46 +269,53 @@ if (countOfWrongInputs(obj.getString("login"))) {
 
         }
         return ResponseEntity.status(401).body("error");
-
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/changepassword")
     public ResponseEntity<String> changePassword(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
-        //if (findLogin(obj.getString("login")) && BCrypt.checkpw(obj.getString("oldpassword"), findInformation(obj.getString("login")).getPassword()) && findInformation(obj.getString("login")).getToken().equals(userToken)) {
-        if (new MongoDBcontroller().existUserMongo(obj.getString("login")) && new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("oldpassword")) && checkToken(obj.getString("login"), userToken)) {
-            //findInformation(obj.getString("login")).setPassword(hash(obj.getString("newpassword")));
-            new MongoDBcontroller().changePassword(obj.getString("login"), hash(obj.getString("newpassword")));
-            return ResponseEntity.status(200).body("changed");
+        JSONObject res = new JSONObject();
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            res.put("error", "This user login was not found");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
-        return ResponseEntity.status(401).body("error");
+        if (!new MongoDBcontroller().checkUserPassMongo(obj.getString("login"), obj.getString("oldpassword"))) {
+            res.put("error", "Wrong password");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+        if (!checkToken(obj.getString("login"), userToken)) {
+            res.put("error", "Wrong token");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+        new MongoDBcontroller().changePassword(obj.getString("login"), hash(obj.getString("newpassword")));
+        res.put("success", "Password changed");
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).body(res.toString());
     }
 
     @RequestMapping(method = RequestMethod.POST, value = "/message/new")
     public ResponseEntity<String> newMessage(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
-        //if (findInformation(obj.getString("from")).getToken().equals(userToken) && findLogin(obj.getString("from")) && findLogin(obj.getString("to"))) {
-        if (checkToken(obj.getString("from"), userToken) && new MongoDBcontroller().existUserMongo(obj.getString("from")) && new MongoDBcontroller().existUserMongo(obj.getString("to"))) {
-
-
-            MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
-            mongoDBcontroller.addMessages(obj.getString("from"), obj.getString("to"), obj.getString("message"));
-
-/*
-            String timeStamp = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy").format(Calendar.getInstance().getTime());
-            obj.put("time", timeStamp);
-
-
-            messages.add(obj.toString());
-
- */
-            return ResponseEntity.status(201).body("Message send");
-        } else {
-            return ResponseEntity.status(400).body("error");
+        JSONObject res = new JSONObject();
+        if (!checkToken(obj.getString("from"), userToken)) {
+            res.put("error", "Wrong token");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("from"))) {
+            res.put("error", "This user login was not found!");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("to"))) {
+            res.put("error", "This user login was not found");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
+        }
+
+
+        MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
+        mongoDBcontroller.addMessages(obj.getString("from"), obj.getString("to"), obj.getString("message"));
+        res.put("success", "Message send");
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).body(res.toString());
     }
 
-    //@RequestMapping(method = RequestMethod.POST, value = "/messages?from={fromUser}")//@PathVariable String fromUser
     @RequestMapping(method = RequestMethod.POST, value = "/messages")
     public ResponseEntity<String> showMessages(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
@@ -348,7 +337,6 @@ if (countOfWrongInputs(obj.getString("login"))) {
         } else {
             return ResponseEntity.status(400).body("error wrong login or token");
         }
-
     }
 
     @PatchMapping(value = "update/{login}")
@@ -372,15 +360,18 @@ if (countOfWrongInputs(obj.getString("login"))) {
     @RequestMapping(method = RequestMethod.POST, value = "/delete/messages")
     public ResponseEntity<String> deleteMessages(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
-        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))){
-            return ResponseEntity.status(401).body("user doesn't exist");
+        JSONObject res = new JSONObject();
+        if (!new MongoDBcontroller().existUserMongo(obj.getString("login"))) {
+            res.put("error", "User doesn't exist");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
-        if (!checkToken(obj.getString("login"), userToken)){
-            return ResponseEntity.status(401).body("wrong token");
+        if (!checkToken(obj.getString("login"), userToken)) {
+            res.put("error", "Wrong token");
+            return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
-
         new MongoDBcontroller().deleteAllMessagess(obj.getString("login"));
-        return ResponseEntity.status(200).body("deleted");
+        res.put("success", "Deleted");
+        return ResponseEntity.status(201).contentType(MediaType.APPLICATION_JSON).body(res.toString());
     }
 
     public String generateToken() {
@@ -402,6 +393,4 @@ if (countOfWrongInputs(obj.getString("login"))) {
         }
         return generatedString;
     }
-
-
 }

@@ -129,20 +129,27 @@ public class MongoDBcontroller {
         return messages;
     }
 
-    public List<String> findLogsFromMongo(String login) {
+    public  JSONObject findLogsFromMongo(String login) {
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
+
         List<String> myList = new ArrayList<String>();
+        JSONObject logs = new JSONObject();
+        int count = 0;
+
         MongoCursor<Document> mongoCursor = collectionLogs.find().iterator();
         while (mongoCursor.hasNext()) {
             Document doc = mongoCursor.next();
             JSONObject object = new JSONObject(doc.toJson());
             if (object.getString("login").equals(login)) {
-                myList.add(object.toString());
+                //myList.add(object.toString());
+                count++;
+                logs.put(String.valueOf(count), object);
             }
         }
         System.out.println(myList);
-        return myList;
+        //return myList;
+        return logs;
     }
 
     private String hash(String password) {
@@ -225,7 +232,6 @@ public class MongoDBcontroller {
         return false;
     }
 
-
     @SuppressWarnings("unchecked")
     public void configReader() throws FileNotFoundException {
         String filePath = "C:\\Users\\FireflySK\\IdeaProjects\\myServer\\src\\main\\java\\database\\config.json";
@@ -247,30 +253,4 @@ public class MongoDBcontroller {
             e.printStackTrace();
         }
     }
-
-
 }
-/*
-
-
-
-db.createCollection( <list>,
-   {
-     fname: <string>,
-     lname: <string>,
-     login: <string>,
-     password: <string>
-   }
-)
-db.createCollection( <log>,
-   {
-
-   }
-)
-db.createCollection( <messages>,
-   {
-
-   }
-)
-
- */
