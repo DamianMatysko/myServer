@@ -258,7 +258,6 @@ public class Requests {
         return false;
     }
 
-    //@RequestMapping(method = RequestMethod.POST, value = "/log?type={type}")// @PathVariable String type
     @RequestMapping(method = RequestMethod.POST, value = "/log")
     public ResponseEntity log(@RequestBody String data, @RequestParam(value = "token") String userToken) throws FileNotFoundException {
         JSONObject obj = new JSONObject(data);
