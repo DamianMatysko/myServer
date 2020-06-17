@@ -308,7 +308,6 @@ public class Requests {
             return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(res.toString());
         }
 
-
         MongoDBcontroller mongoDBcontroller = new MongoDBcontroller();
         mongoDBcontroller.addMessages(obj.getString("from"), obj.getString("to"), obj.getString("message"));
         res.put("success", "Message send");
